@@ -1,5 +1,7 @@
 import './config';
 
+import { Module } from '@nestjs/common';
+
 import { ServerFeature } from '../../core/config';
 import { DocStorageModule } from '../../core/doc';
 import { FeatureModule } from '../../core/features';
@@ -38,8 +40,7 @@ registerCopilotProvider(OpenAIProvider);
 registerCopilotProvider(GoogleProvider);
 registerCopilotProvider(PerplexityProvider);
 
-@Plugin({
-  name: 'copilot',
+@Module({
   imports: [DocStorageModule, FeatureModule, QuotaModule, PermissionModule],
   providers: [
     ChatSessionService,
@@ -60,12 +61,5 @@ registerCopilotProvider(PerplexityProvider);
     CopilotContextDocJob,
   ],
   controllers: [CopilotController],
-  contributesTo: ServerFeature.Copilot,
-  if: config => {
-    if (config.flavor.graphql || config.flavor.doc) {
-      return assertProvidersConfigs(config);
-    }
-    return false;
-  },
 })
 export class CopilotModule {}

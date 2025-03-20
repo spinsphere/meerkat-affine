@@ -565,8 +565,8 @@ export class CopilotController implements BeforeApplicationShutdown {
     @Res() res: Response,
     @Query() params: Record<string, string>
   ) {
-    const { unsplashKey } = this.config.plugins.copilot || {};
-    if (!unsplashKey) {
+    const { key } = this.config.copilot.unsplash;
+    if (!key) {
       throw new UnsplashIsNotConfigured();
     }
 
@@ -574,7 +574,7 @@ export class CopilotController implements BeforeApplicationShutdown {
     const response = await fetch(
       `https://api.unsplash.com/search/photos?${query}`,
       {
-        headers: { Authorization: `Client-ID ${unsplashKey}` },
+        headers: { Authorization: `Client-ID ${key}` },
         signal: this.getSignal(req),
       }
     );

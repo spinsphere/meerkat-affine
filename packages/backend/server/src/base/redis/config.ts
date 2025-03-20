@@ -1,11 +1,18 @@
 import { RedisOptions } from 'ioredis';
 
-import { defineStartupConfig, ModuleConfig } from '../../base/config';
+import { defineModuleConfig } from '../config';
 
-declare module '../config' {
-  interface AppConfig {
-    redis: ModuleConfig<RedisOptions>;
+declare global {
+  interface NewAppConfig {
+    redis: {
+      redis: ConfigItem<RedisOptions>;
+    };
   }
 }
 
-defineStartupConfig('redis', {});
+defineModuleConfig('redis', {
+  redis: {
+    desc: 'The config for the redis client.',
+    default: {},
+  },
+});

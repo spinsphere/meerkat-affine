@@ -1,9 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, Provider, Type } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InstalledLicense, PrismaClient } from '@prisma/client';
 
 import {
-  Config,
+  ActionForbidden,
   EventBus,
   InternalServerError,
   LicenseNotFound,
@@ -22,35 +22,22 @@ interface License {
 }
 
 @Injectable()
-export class LicenseService implements OnModuleInit {
+export class LicenseService {
   private readonly logger = new Logger(LicenseService.name);
 
   constructor(
-    private readonly config: Config,
     private readonly db: PrismaClient,
     private readonly event: EventBus,
     private readonly models: Models
   ) {}
 
-  async onModuleInit() {
-    if (this.config.isSelfhosted) {
-      this.event.on(
-        'workspace.subscription.activated',
-        this.onWorkspaceSubscriptionUpdated
-      );
-      this.event.on(
-        'workspace.subscription.canceled',
-        this.onWorkspaceSubscriptionCanceled
-      );
-    }
-  }
-
-  private readonly onWorkspaceSubscriptionUpdated = async ({
+  @OnEvent('workspace.subscription.activated')
+  async onWorkspaceSubscriptionUpdated({
     workspaceId,
     plan,
     recurring,
     quantity,
-  }: Events['workspace.subscription.activated']) => {
+  }: Events['workspace.subscription.activated']) {
     switch (plan) {
       case SubscriptionPlan.SelfHostedTeam:
         await this.models.workspaceFeature.add(
@@ -66,12 +53,13 @@ export class LicenseService implements OnModuleInit {
       default:
         break;
     }
-  };
+  }
 
-  private readonly onWorkspaceSubscriptionCanceled = async ({
+  @OnEvent('workspace.subscription.canceled')
+  async onWorkspaceSubscriptionCanceled({
     workspaceId,
     plan,
-  }: Events['workspace.subscription.canceled']) => {
+  }: Events['workspace.subscription.canceled']) {
     switch (plan) {
       case SubscriptionPlan.SelfHostedTeam:
         await this.models.workspaceFeature.remove(workspaceId, 'team_plan_v1');
@@ -79,7 +67,7 @@ export class LicenseService implements OnModuleInit {
       default:
         break;
     }
-  };
+  }
 
   async getLicense(workspaceId: string) {
     return this.db.installedLicense.findUnique({
@@ -201,10 +189,6 @@ export class LicenseService implements OnModuleInit {
 
   @OnEvent('workspace.members.updated')
   async updateTeamSeats(payload: Events['workspace.members.updated']) {
-    if (!this.config.isSelfhosted) {
-      return;
-    }
-
     const { workspaceId, count } = payload;
 
     const license = await this.db.installedLicense.findUnique({
@@ -253,10 +237,6 @@ export class LicenseService implements OnModuleInit {
 
   @Cron(CronExpression.EVERY_10_MINUTES)
   async licensesHealthCheck() {
-    if (!this.config.isSelfhosted) {
-      return;
-    }
-
     const licenses = await this.db.installedLicense.findMany({
       where: {
         validatedAt: {
@@ -360,3 +340,21 @@ export class LicenseService implements OnModuleInit {
     }
   }
 }
+
+export const LicenseServiceProvider: Provider | Type = env.selfhosted
+  ? LicenseService
+  : {
+      provide: LicenseService,
+      useFactory: () => {
+        return new Proxy(
+          {},
+          {
+            get() {
+              return () => {
+                throw new ActionForbidden();
+              };
+            },
+          }
+        );
+      },
+    };

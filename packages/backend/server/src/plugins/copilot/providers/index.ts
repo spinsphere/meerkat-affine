@@ -49,7 +49,7 @@ export function registerCopilotProvider<
   const type = provider.type;
 
   const factory = (config: Config, logger: Logger) => {
-    const providerConfig = config.plugins.copilot?.[type];
+    const providerConfig = config.copilot?.[type];
     if (!provider.assetsConfig(providerConfig as C)) {
       throw new Error(
         `Invalid configuration for copilot provider ${type}: ${JSON.stringify(providerConfig)}`
@@ -110,7 +110,7 @@ export class CopilotProviderService {
   >();
 
   private create(provider: CopilotProviderType): CopilotProvider {
-    assert(this.config.plugins.copilot);
+    assert(this.config.copilot);
     const providerFactory = COPILOT_PROVIDER.get(provider);
 
     if (!providerFactory) {

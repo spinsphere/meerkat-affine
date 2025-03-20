@@ -1,11 +1,12 @@
-import { OptionalModule } from '../../base';
+import { Module } from '@nestjs/common';
+
 import { PermissionModule } from '../../core/permission';
 import { QuotaModule } from '../../core/quota';
 import { LicenseResolver } from './resolver';
-import { LicenseService } from './service';
+import { LicenseServiceProvider } from './service';
 
-@OptionalModule({
+@Module({
   imports: [QuotaModule, PermissionModule],
-  providers: [LicenseService, LicenseResolver],
+  providers: [LicenseServiceProvider, LicenseResolver],
 })
 export class LicenseModule {}

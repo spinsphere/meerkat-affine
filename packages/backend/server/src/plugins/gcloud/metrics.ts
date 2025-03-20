@@ -1,7 +1,7 @@
 import { MetricExporter } from '@google-cloud/opentelemetry-cloud-monitoring-exporter';
 import { TraceExporter } from '@google-cloud/opentelemetry-cloud-trace-exporter';
 import { GcpDetectorSync } from '@google-cloud/opentelemetry-resource-util';
-import { Global, Provider } from '@nestjs/common';
+import { Global, Module, Provider } from '@nestjs/common';
 import { getEnv } from '@opentelemetry/core';
 import { Resource } from '@opentelemetry/resources';
 import {
@@ -14,7 +14,6 @@ import {
   SEMRESATTRS_K8S_POD_NAME,
 } from '@opentelemetry/semantic-conventions';
 
-import { OptionalModule } from '../../base';
 import { OpentelemetryFactory } from '../../base/metrics';
 
 export class GCloudOpentelemetryFactory extends OpentelemetryFactory {
@@ -47,14 +46,14 @@ export class GCloudOpentelemetryFactory extends OpentelemetryFactory {
   }
 }
 
-const factorProvider: Provider = {
+const FactorProvider: Provider = {
   provide: OpentelemetryFactory,
   useFactory: () => new GCloudOpentelemetryFactory(),
 };
 
 @Global()
-@OptionalModule({
-  if: config => config.metrics.enabled,
-  overrides: [factorProvider],
+@Module({
+  providers: [FactorProvider],
+  exports: [FactorProvider],
 })
 export class GCloudMetrics {}

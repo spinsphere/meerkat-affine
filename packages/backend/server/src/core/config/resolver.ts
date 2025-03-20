@@ -13,13 +13,13 @@ import {
 import { RuntimeConfig, RuntimeConfigType } from '@prisma/client';
 import { GraphQLJSON, GraphQLJSONObject } from 'graphql-scalars';
 
-import { Config, Runtime, URLHelper } from '../../base';
+import { Config, URLHelper } from '../../base';
+import { Namespace } from '../../env';
 import { Feature } from '../../models';
 import { Public } from '../auth';
 import { Admin } from '../common';
 import { AvailableUserFeatureConfig } from '../features';
 import { ServerFlags } from './config';
-import { ENABLED_FEATURES } from './server-feature';
 import { ServerService } from './service';
 import { ServerConfigType } from './types';
 
@@ -56,10 +56,10 @@ export class ReleaseVersionType {
   changelog!: string;
 }
 
-const RELEASE_CHANNEL_MAP = new Map<Config['AFFINE_ENV'], string>([
-  ['dev', 'canary'],
-  ['beta', 'beta'],
-  ['production', 'stable'],
+const RELEASE_CHANNEL_MAP = new Map<Namespace, string>([
+  [Namespace.Dev, 'canary'],
+  [Namespace.Beta, 'beta'],
+  [Namespace.Production, 'stable'],
 ]);
 @ObjectType()
 export class ServerRuntimeConfigType implements Partial<RuntimeConfig> {
@@ -100,7 +100,6 @@ export class ServerConfigResolver {
 
   constructor(
     private readonly config: Config,
-    private readonly runtime: Runtime,
     private readonly url: URLHelper,
     private readonly server: ServerService
   ) {}
@@ -111,16 +110,17 @@ export class ServerConfigResolver {
   })
   serverConfig(): ServerConfigType {
     return {
-      name: this.config.serverName,
-      version: this.config.version,
+      name: this.config.server.name,
+      version: env.version,
       baseUrl: this.url.home,
-      type: this.config.type,
+      type: env.DEPLOYMENT_TYPE,
       // BACKWARD COMPATIBILITY
       // the old flavors contains `selfhosted` but it actually not flavor but deployment type
       // this field should be removed after frontend feature flags implemented
-      flavor: this.config.type,
-      features: Array.from(ENABLED_FEATURES),
-      enableTelemetry: this.config.metrics.telemetry.enabled,
+      flavor: env.DEPLOYMENT_TYPE,
+      features: this.server.features,
+      // not actually used
+      enableTelemetry: false,
     };
   }
 
@@ -128,15 +128,10 @@ export class ServerConfigResolver {
     description: 'credentials requirement',
   })
   async credentialsRequirement() {
-    const config = await this.runtime.fetchAll({
-      'auth/password.max': true,
-      'auth/password.min': true,
-    });
-
     return {
       password: {
-        minLength: config['auth/password.min'],
-        maxLength: config['auth/password.max'],
+        minLength: this.config.auth.passwordRequirements.min,
+        maxLength: this.config.auth.passwordRequirements.max,
       },
     };
   }
@@ -145,12 +140,7 @@ export class ServerConfigResolver {
     description: 'server flags',
   })
   async flags(): Promise<ServerFlagsType> {
-    const records = await this.runtime.list('flags');
-
-    return records.reduce((flags, record) => {
-      flags[record.key as keyof ServerFlagsType] = record.value as any;
-      return flags;
-    }, {} as ServerFlagsType);
+    return this.config.flags;
   }
 
   @ResolveField(() => Boolean, {
@@ -164,7 +154,7 @@ export class ServerConfigResolver {
     description: 'fetch latest available upgradable release of server',
   })
   async availableUpgrade(): Promise<ReleaseVersionType | null> {
-    const channel = RELEASE_CHANNEL_MAP.get(this.config.AFFINE_ENV) ?? 'stable';
+    const channel = RELEASE_CHANNEL_MAP.get(env.NAMESPACE) ?? 'stable';
     const url = `https://affine.pro/api/worker/releases?channel=${channel}`;
 
     try {
@@ -191,7 +181,7 @@ export class ServerConfigResolver {
       }>;
 
       const latest = releases.at(0);
-      if (!latest || latest.name === this.config.version) {
+      if (!latest || latest.name === env.version) {
         return null;
       }
 
@@ -314,22 +304,32 @@ export class ServerServiceConfigResolver {
   }
 
   mail(): ServerMailerConfig {
+    const { enabled, SMTP } = this.config.mailer;
+
+    if (!enabled) {
+      return {
+        host: null,
+        port: null,
+        secure: null,
+        service: null,
+        sender: null,
+      };
+    }
+
     const sender =
-      typeof this.config.mailer.from === 'string'
-        ? this.config.mailer.from
-        : this.config.mailer.from?.address;
+      typeof SMTP.from === 'string' ? SMTP.from : SMTP.from?.address;
 
     return {
-      host: this.config.mailer.host,
-      port: this.config.mailer.port,
-      secure: this.config.mailer.secure,
-      service: this.config.mailer.service,
+      host: SMTP.host,
+      port: SMTP.port,
+      secure: SMTP.secure,
+      service: SMTP.service,
       sender,
     };
   }
 
   database(): ServerDatabaseConfig {
-    const url = new URL(this.config.prisma.datasourceUrl);
+    const url = new URL(this.config.db.datasourceUrl);
 
     return {
       host: url.hostname,

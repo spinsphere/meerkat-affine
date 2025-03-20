@@ -15,7 +15,6 @@ import { Readable } from 'node:stream';
 
 import { Logger } from '@nestjs/common';
 
-import { FsStorageConfig } from '../config';
 import {
   BlobInputType,
   GetObjectMetadata,
@@ -28,6 +27,10 @@ import { autoMetadata, toBuffer } from './utils';
 function escapeKey(key: string): string {
   // avoid '../' and './' in key
   return key.replace(/\.?\.[/\\]/g, '%');
+}
+
+export interface FsStorageConfig {
+  path: string;
 }
 
 export class FsStorageProvider implements StorageProvider {
