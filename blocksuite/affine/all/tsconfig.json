@@ -36,6 +36,7 @@
     { "path": "../inlines/footnote" },
     { "path": "../inlines/latex" },
     { "path": "../inlines/link" },
+    { "path": "../inlines/mention" },
     { "path": "../inlines/preset" },
     { "path": "../inlines/reference" },
     { "path": "../model" },

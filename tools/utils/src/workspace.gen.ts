@@ -34,6 +34,7 @@ export const PackageList = [
       'blocksuite/affine/inlines/footnote',
       'blocksuite/affine/inlines/latex',
       'blocksuite/affine/inlines/link',
+      'blocksuite/affine/inlines/mention',
       'blocksuite/affine/inlines/preset',
       'blocksuite/affine/inlines/reference',
       'blocksuite/affine/model',
@@ -516,6 +517,18 @@ export const PackageList = [
     ],
   },
   {
+    location: 'blocksuite/affine/inlines/mention',
+    name: '@blocksuite/affine-inline-mention',
+    workspaceDependencies: [
+      'blocksuite/affine/components',
+      'blocksuite/affine/model',
+      'blocksuite/affine/shared',
+      'blocksuite/framework/block-std',
+      'blocksuite/framework/global',
+      'blocksuite/framework/store',
+    ],
+  },
+  {
     location: 'blocksuite/affine/inlines/preset',
     name: '@blocksuite/affine-inline-preset',
     workspaceDependencies: [
@@ -523,6 +536,7 @@ export const PackageList = [
       'blocksuite/affine/inlines/footnote',
       'blocksuite/affine/inlines/latex',
       'blocksuite/affine/inlines/link',
+      'blocksuite/affine/inlines/mention',
       'blocksuite/affine/inlines/reference',
       'blocksuite/affine/model',
       'blocksuite/affine/rich-text',
@@ -1042,6 +1056,7 @@ export type PackageName =
   | '@blocksuite/affine-inline-footnote'
   | '@blocksuite/affine-inline-latex'
   | '@blocksuite/affine-inline-link'
+  | '@blocksuite/affine-inline-mention'
   | '@blocksuite/affine-inline-preset'
   | '@blocksuite/affine-inline-reference'
   | '@blocksuite/affine-model'
